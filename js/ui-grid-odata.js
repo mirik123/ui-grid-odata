@@ -1,22 +1,9 @@
 /*
- * OData feature for ui-grid
+ * OData plugin for ui-grid
  *
  * Copyright (c) 2014-2015, Mark Babayev (https://github.com/mirik123) markolog@gmail.com
  * License MIT (MIT-LICENSE.txt)
- *
- * The idea for creating client adapter for quering odata services first appeared in free-jqgrid project.
- * After that it has been converted and adopted for angular.js
  */
-
-//TODO
-/*
-ui-grid-expandable:
-1. plus signs should not appear when ui-grid-expandable exists but enableExpandable = false
-2. filter header doesn't appear in main grid when enableFiltering=true and exists ui-grid-expandable (it still works in subgrids)
-3. grid rows cannot be multiline (should have dynamic height)
-4. subgrid heights are not calculated correct (have static height)
-5. main grid doesn't change its height when subgrid expands
-*/
 
 (function () {
     'use strict';

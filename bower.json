@@ -1,0 +1,27 @@
+{
+  "name": "ui-grid-odata",
+  "version": "0.0.5",
+  "authors": [
+    "Mark Babayev <markolog@gmail.com>"
+  ],
+  "description": "odata plugin for angular ui-grid",
+  "main": "js/ui-grid-odata.js",
+  "moduleType": [
+    "globals"
+  ],
+  "keywords": [
+    "angular",
+    "ui-grid",
+    "expandable",
+    "odata"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests",
+    ".eslintrc"
+  ]
+}

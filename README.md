@@ -1,6 +1,6 @@
 # ui-grid-odata
 
-This plugin for angular ui-grid allows working with odata v3/v4 services.<br/>
+This plugin allows querying for odata v3/v4 services.<br/>
 I first implemented this idea in free-jqgrid project: [grid.odata.js](https://github.com/free-jqgrid/jqGrid/blob/master/plugins/grid.odata.js), [wiki](https://github.com/free-jqgrid/jqGrid/wiki/OData-plugin-for-jqGrid).<br/>
 You can compare it with the angular implementation to see the differences between jqGrid and Angular development. <br/>
 

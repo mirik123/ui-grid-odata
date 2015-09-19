@@ -12,8 +12,47 @@ The angular ui-grid-odata feature does the following:
 * Parses $metadata response to the plain JavaScript object.
 * Builds ui-grid column definitions based on odata metadata.
 * When NavigationProperties exist - configures ui-grid-expandable feature and builds multilevel subgrids.
+* TODO: implement verbs $count, $skip, $top, $orderby for paging and sorting; together with ui-grid-pagination
+* TODO: implement verb $filter for filtering. 
 
-Script example:
+## Public API
+**expandRow (row, col, rowRenderIndex, $event)**<br/>
+*{row} - grid row object*<br/>
+*{col} - grid col object (if missing, the first column references NavigationProperty or ComplexType is used)*<br/>
+*{rowRenderIndex} - grid row $index*<br/>
+*{$event} - grid $event*<br/>
+Used inside row template. Builds column definitions and data for subgrid (requires ui-grid-expandable directive).
+````Html
+    <div class="ui-grid-cell-contents"><a style="cursor:pointer" class="SubgridTemplate" ng-click="grid.options.odata.expandRow(row, col, rowRenderIndex, $event)">{{col.displayName}}</a></div>
+````
+
+**genColumnDefs (grid, hasExpandable, callback)**<br/>
+*{grid} - reference to the main grid*<br/>
+*{hasExpandable} -parameter is true when ui-grid-expandable directive is applied on the main grid.*<br/>
+*{callback} - callback function to be called instead of the default success event.*<br/>
+Queries odata $metadata and builds grid.columnDefs, initializes ui-grid-expandable feature.
+
+**parseMetadata (data, expandable)**<br/>
+*{data} -  odata $metadata in xml format*<br/>
+*{expandable} - the expantion type of the odata feature: subgrid,link,json*<br/>
+Parses odata $metadata in xml format to the plain javascript object.
+````JavaScript
+ $http.get('http://services.odata.org/V4/OData/OData.svc/$metadata', {dataType: 'xml'}).then(function (response) {
+      var colModels = $this.parseMetadata(response.data, 'subgrid');
+ });
+````
+
+## Events
+success(grid)
+```` 
+grid.api.odata.raise.success(grid);
+````
+error(data, message)
+```` 
+grid.api.odata.raise.error(response, 'failed to query $metadata'); 
+````
+ 
+## Script example:
 ````JavaScript
      var app = angular.module('app', ['ui.grid', 'ui.grid.expandable', 'ui.grid.odata']);
      app.controller('MainCtrl', ['$scope', 'gridUtil', function ($scope, gridUtil) {
@@ -22,7 +61,7 @@ Script example:
             odata: {
                 metadatatype: 'xml',
                 datatype: 'json',
-                expandable: 'link',
+                expandable: 'subgrid',  //can be also 'link' or 'json'
                 entitySet: 'Products',
                 dataurl: "http://services.odata.org/V4/OData/OData.svc/Products",
                 metadataurl: 'http://services.odata.org/V4/OData/OData.svc/$metadata',

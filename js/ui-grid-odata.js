@@ -267,13 +267,6 @@
                                 cellTemplate: isNavigation && expandable === 'subgrid' ? 'ui-grid/odataSubgridTemplate' :
                                     isNavigation && expandable === 'link' ? 'ui-grid/odataLinkTemplate' :
                                         ($templateCache.get('ui-grid/odata' + type.replace('.', '')) ? 'ui-grid/odata' + type.replace('.', '') : 'ui-grid/uiGridCell'),
-
-                                //editableCellTemplate: 'ui-grid/cellEditor',
-                                //editableCellTemplate: isBool ? 'ui-grid/dropdownEditor' : 'ui-grid/cellEditor',
-                                //editDropdownOptionsArray: [{ id: 1, value: 'true' }, { id: 0, value: 'false' }],
-                                //cellEditableCondition: function($scope){return $scope.rowRenderIndex;},
-                                //editDropdownRowEntityOptionsArrayPath: 'foo.bar[0].options',
-                                //enableCellEdit: !isNavigation && !iskey, - object is disabled
                                 odata: {
                                     expand: isNavigation ? expandable : isComplex ? 'json' : null,
                                     isnavigation: isNavigation,
@@ -434,7 +427,7 @@
             odata: {
                 metadatatype: 'xml',
                 datatype: 'json',
-                expandable: 'link',
+                expandable: 'subgrid',
                 entitySet: 'Products',
                 dataurl: "http://services.odata.org/V4/OData/OData.svc/Products",
                 metadataurl: 'http://services.odata.org/V4/OData/OData.svc/$metadata',

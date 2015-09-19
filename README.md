@@ -12,8 +12,13 @@ The angular ui-grid-odata feature does the following:
 * Parses $metadata response to the plain JavaScript object.
 * Builds ui-grid column definitions based on odata metadata.
 * When NavigationProperties exist - configures ui-grid-expandable feature and builds multilevel subgrids.
-* TODO: implement verbs $count, $skip, $top, $orderby for paging and sorting; together with ui-grid-pagination
-* TODO: implement verb $filter for filtering. 
+* TODO: implement verbs $count, $skip, $top, $orderby, $filter for paging, sorting and filtering; together with ui-grid-pagination.
+
+## Other feature dependencies
+| Dependency name | Added functionality |
+| --- | --- |
+| ui-grid-expandable | Enables automatic multilevel subgrid expansions |
+| ui-grid-pagination | Enables server-side paging, sorting and filtering using odata verbs |
 
 ## Public API
 **expandRow (row, col, rowRenderIndex, $event)**<br/>

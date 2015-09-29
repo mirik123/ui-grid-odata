@@ -3,6 +3,9 @@
  *
  * Copyright (c) 2014-2015, Mark Babayev (https://github.com/mirik123) markolog@gmail.com
  * License MIT (MIT-LICENSE.txt)
+ *
+ * The idea for creating client adapter for quering odata services first appeared in free-jqgrid project.
+ * After that it has been converted and adopted for angular.js
  */
 
 (function () {
@@ -48,6 +51,17 @@
             }
 
             return input;
+        };
+    });
+
+    /**
+     *  @ngdoc filter
+     *  @name ui.grid.odata.filter:EdmDateTimeOffset
+     *  @description Example filter for odata feature. It is used for Edm.DateTimeOffset odata type.
+     */
+    module.filter('EdmDateTimeOffset', function () {
+        return function (input) {
+            return input ? new Date(input).toDateString() : null;
         };
     });
 
@@ -100,10 +114,34 @@
 
                 var dataChangeDereg = gridApi.grid.registerDataChangeCallback(
                     function() {
-                        this.parentRow.grid.options.expandableRowHeight = this.gridHeight;
+                        if (this.parentRow) { this.parentRow.grid.options.expandableRowHeight = this.gridHeight; }
                         dataChangeDereg();
                     },
                     [uiGridConstants.dataChange.ROW],
+                    gridApi.grid
+                );
+
+                var dataChangeDereg2 = gridApi.grid.registerDataChangeCallback(
+                    function() {
+                        //repeats ui-grid-expandable initialization directive
+                        //https://github.com/angular-ui/ui-grid/blob/master/src/features/expandable/js/expandable.js
+                        if(this.options.enableExpandableRowHeader !== false && this.columns.filter(function(itm) {return itm.name === 'expandableButtons';}).length === 0) {
+                            var expandableRowHeaderColDef = {
+                                name: 'expandableButtons',
+                                displayName: '',
+                                exporterSuppressExport: true,
+                                enableColumnResizing: false,
+                                enableColumnMenu: false,
+                                width: this.options.expandableRowHeaderWidth || 40,
+                                cellTemplate: $templateCache.get('ui-grid/expandableRowHeader'),
+                                headerCellTemplate: $templateCache.get('ui-grid/expandableTopRowHeader')
+                            };
+                            this.addRowHeaderColumn(expandableRowHeaderColDef);
+                        }
+
+                        dataChangeDereg2();
+                    },
+                    [uiGridConstants.dataChange.COLUMN],
                     gridApi.grid
                 );
 
@@ -167,6 +205,8 @@
             row.entity.subGridOptions.enableExpandable =
                     row.entity.subGridOptions.odata.expandable === 'subgrid' &&
                     row.entity.subGridOptions.columnDefs.some(function (itm) {return itm.odata.expand === 'subgrid';});
+
+            row.entity.subGridOptions.enableExpandableRowHeader = row.entity.subGridOptions.enableExpandable;
 
             //the default value for minRowsToShow=10
             //it is OK for main grid but should be changed to minimum for subgrids
@@ -310,6 +350,11 @@
                 }, grid.options.odata);
 
                 grid.options.onRegisterApi = onRegisterApi(grid.options.onRegisterApi, grid.appScope);
+                grid.options.enableExpandableRowHeader = false;
+
+                if(!grid.options.expandableRowTemplate) {
+                    grid.options.expandableRowTemplate = 'ui-grid/odataExpandableRowTemplate';
+                }
 
                 if (!grid.options.odata.entitySet) {
                     grid.api.odata.raise.error(null, 'entitySet cannot be empty');
@@ -342,8 +387,19 @@
                             grid.options.odata.expandable = 'link';
                         }
 
-                        if(grid.options.enableExpandable && !grid.options.expandableRowTemplate) {
-                            grid.options.expandableRowTemplate = 'ui-grid/odataExpandableRowTemplate';
+                        grid.options.enableExpandableRowHeader = grid.options.enableExpandable;
+                        grid.api.core.notifyDataChange(uiGridConstants.dataChange.COLUMN);
+
+                        var columnDefs = colModels[grid.options.odata.entitySet];
+                        if(grid.options.columnDefs && grid.options.columnDefs.length > 0) {
+                            var i,j;
+                            for(i=0;i<columnDefs.length;i++){
+                                for(j=0;j<grid.options.columnDefs.length;j++){
+                                    if(columnDefs[i].field === grid.options.columnDefs[j].field) {
+                                        angular.merge(columnDefs[i], grid.options.columnDefs[j]);
+                                    }
+                                }
+                            }
                         }
 
                         angular.merge(grid.options, {
@@ -352,7 +408,7 @@
                                 subgridCols: colModels,
                                 key: keyColumn
                             },
-                            columnDefs: angular.merge({}, colModels[grid.options.odata.entitySet], grid.options.columnDefs)
+                            columnDefs: columnDefs
                         });
 
                         if(angular.isFunction(callback)) {
@@ -461,7 +517,7 @@
         return {
             restrict: 'A',
             replace: true,
-            priority: 0,
+            priority: 10,
             require: '^uiGrid',
             scope: false,
             compile: function () {

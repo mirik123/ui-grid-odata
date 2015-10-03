@@ -62,7 +62,9 @@ grid.api.odata.raise.error(response, 'failed to query $metadata');
      var app = angular.module('app', ['ui.grid', 'ui.grid.expandable', 'ui.grid.odata']);
      app.controller('MainCtrl', ['$scope', 'gridUtil', function ($scope, gridUtil) {
         $scope.myGrid = {
-            expandableRowTemplate: 'ui-grid/odataExpandableRowTemplate',
+            enableFiltering: true,
+            showGridFooter: true,
+            showColumnFooter: true,
             odata: {
                 metadatatype: 'xml',
                 datatype: 'json',
@@ -71,7 +73,12 @@ grid.api.odata.raise.error(response, 'failed to query $metadata');
                 dataurl: "http://services.odata.org/V4/OData/OData.svc/Products",
                 metadataurl: 'http://services.odata.org/V4/OData/OData.svc/$metadata',
                 gencolumns: true
-            }
+            },
+            columnDefs: [
+                { field: 'Description', width: 300 },
+                { field: 'ID', width: 50 },
+                { field: 'Name', width: 200 }
+            ]
         };
 
         $scope.myGrid.onRegisterApi = function (gridApi) {

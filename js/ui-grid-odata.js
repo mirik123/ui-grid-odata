@@ -70,7 +70,7 @@
      *  @name ui.grid.odata.service:uiGridODataService
      *  @description Service for odata feature.
      */
-    module.service('uiGridODataService', ['$http', '$injector', '$templateCache', 'uiGridConstants', function ($http, $injector, $templateCache, uiGridConstants) {
+    module.service('uiGridODataService', ['$http', '$injector', '$templateCache', 'uiGridConstants', 'gridUtil', function ($http, $injector, $templateCache, uiGridConstants, gridUtil) {
         function format (text) {
             var args = arguments;
             if (!text) {
@@ -101,7 +101,7 @@
             return res;
         }
 
-        function onRegisterApi (registerApiOrig, gridscope) {
+        function onRootRegisterApi (registerApiOrig, gridscope) {
             return function (gridApi) {
                 if(!gridApi.odata) {
                     gridApi.registerEventsFromObject(publicApi.events);
@@ -113,15 +113,6 @@
                 }
 
                 var dataChangeDereg = gridApi.grid.registerDataChangeCallback(
-                    function() {
-                        if (this.parentRow) { this.parentRow.grid.options.expandableRowHeight = this.gridHeight; }
-                        dataChangeDereg();
-                    },
-                    [uiGridConstants.dataChange.ROW],
-                    gridApi.grid
-                );
-
-                var dataChangeDereg2 = gridApi.grid.registerDataChangeCallback(
                     function() {
                         //repeats ui-grid-expandable initialization directive
                         //https://github.com/angular-ui/ui-grid/blob/master/src/features/expandable/js/expandable.js
@@ -139,18 +130,64 @@
                             this.addRowHeaderColumn(expandableRowHeaderColDef);
                         }
 
-                        dataChangeDereg2();
+                        dataChangeDereg();
                     },
                     [uiGridConstants.dataChange.COLUMN],
                     gridApi.grid
                 );
 
-                gridApi.expandable.on.rowExpandedStateChanged(gridscope, function(row) {
-                    var col = row.grid.options.columnDefs.filter(function (itm) {return itm.odata.expand === 'subgrid';})[0];
-                    if (col) {
-                        row.grid.options.odata.expandRow(row, col);
-                    }
-                });
+                if(gridApi.expandable) {
+                    gridApi.expandable.on.rowExpandedStateChanged(gridscope, function (row) {
+                        var col = row.grid.options.columnDefs.filter(function (itm) {
+                            return itm.odata.expand === 'subgrid';
+                        })[0];
+                        if (col) {
+                            row.grid.options.odata.expandRow(row, col);
+                        }
+                    });
+                }
+            };
+        }
+
+        function onRegisterApi (registerApiOrig, gridscope) {
+            return function (gridApi) {
+                if(!gridApi.odata) {
+                    gridApi.registerEventsFromObject(publicApi.events);
+                    gridApi.registerMethodsFromObject(publicApi.methods);
+                }
+
+                if (angular.isFunction(registerApiOrig)) {
+                    registerApiOrig(gridApi);
+                }
+
+                gridApi.grid.registerDataChangeCallback(
+                    function() {
+                        if (this.parentRow){
+                            this.parentRow.grid.options.expandableRowHeight = this.gridHeight;
+                            this.parentRow.height = this.parentRow.grid.options.rowHeight + (this.parentRow.isExpanded ? this.gridHeight : 0);
+
+                            var origHeight = parseInt(this.parentRow.grid.element.css('height').replace('px', ''), 10);
+                            var newHeight = origHeight + (this.parentRow.isExpanded ? 1 : -1) * this.gridHeight;
+                            this.parentRow.grid.element.css('height', newHeight + 'px');
+                            this.parentRow.grid.gridHeight = newHeight;
+
+                            //this.api.core.handleWindowResize();
+                        }
+                    },
+                    [uiGridConstants.dataChange.ROW],
+                    gridApi.grid
+                );
+
+                if(gridApi.expandable) {
+                    gridApi.expandable.on.rowExpandedStateChanged(gridscope, function (row) {
+                        var col = row.grid.options.columnDefs.filter(function (itm) {
+                            return itm.odata.expand === 'subgrid';
+                        })[0];
+                        if (col) {
+                            row.grid.options.odata.expandRow(row, col);
+                        }
+                    });
+                }
             };
         }
 
@@ -171,11 +208,6 @@
         function expandRow (row, col, rowRenderIndex, $event) {
             var grid = row.grid;
             var colodata = col.colDef && col.colDef.odata || col.odata;
-
-            if(row.entity.$$afterExpandRow) {
-                row.entity.$$afterExpandRow = null;
-                return;
-            }
 
             var dataurl;
             var row_id = grid.options.odata.key ? row.entity[grid.options.odata.key] : rowRenderIndex;
@@ -199,7 +231,7 @@
                     entitySet: col.name,
                     key: keyColumn
                 }),
-                onRegisterApi: onRegisterApi(grid.options.onRegisterApi, grid.appScope)
+                onRegisterApi: onRegisterApi(grid.options.odata.rootRegisterApi, grid.appScope)
             });
 
             row.entity.subGridOptions.enableExpandable =
@@ -208,19 +240,25 @@
 
             row.entity.subGridOptions.enableExpandableRowHeader = row.entity.subGridOptions.enableExpandable;
 
-            //the default value for minRowsToShow=10
-            //it is OK for main grid but should be changed to minimum for subgrids
-            row.entity.subGridOptions.minRowsToShow = 1;
-
             $http.get(row.entity.subGridOptions.odata.dataurl, {dataType: 'json'})
                 .success(function (data) {
                     if (colodata.iscollection && !data.value) {
                         grid.api.odata.raise.error(null, 'data is empty');
+                        return;
                     }
 
-                    row.entity.subGridOptions.data = data.value || [data];
-                    row.entity.$$afterExpandRow = true;
-                    if ($event) {grid.api.expandable.toggleRowExpansion(row.entity);}
+                    data = data.value || [data];
+                    row.entity.subGridOptions.minRowsToShow = data.length;
+
+                    if ($event) {
+                        //copied from grid.api.expandable.toggleRowExpansion(row.entity);
+                        row.isExpanded = !row.isExpanded;
+                        if (!row.isExpanded) {
+                            grid.expandable.expandedAll = false;
+                        }
+                    }
+
+                    row.entity.subGridOptions.data = data;
                 });
         }
 
@@ -346,11 +384,13 @@
                     entitySet: null,
                     expandRow: function (row, col, rowRenderIndex, $event) {
                         return expandRow(row, col, rowRenderIndex, $event);
-                    }
+                    },
+                    rootRegisterApi: grid.options.onRegisterApi
                 }, grid.options.odata);
 
-                grid.options.onRegisterApi = onRegisterApi(grid.options.onRegisterApi, grid.appScope);
+                grid.options.onRegisterApi = onRootRegisterApi(grid.options.odata.rootRegisterApi, grid.appScope);
                 grid.options.enableExpandableRowHeader = false;
+                grid.options.minRowsToShow = 1;
 
                 if(!grid.options.expandableRowTemplate) {
                     grid.options.expandableRowTemplate = 'ui-grid/odataExpandableRowTemplate';
@@ -388,7 +428,6 @@
                         }
 
                         grid.options.enableExpandableRowHeader = grid.options.enableExpandable;
-                        grid.api.core.notifyDataChange(uiGridConstants.dataChange.COLUMN);
 
                         var columnDefs = colModels[grid.options.odata.entitySet];
                         if(grid.options.columnDefs && grid.options.columnDefs.length > 0) {
@@ -444,7 +483,17 @@
                 var callback = function () {
                     $http.get(grid.options.odata.dataurl, {dataType: grid.options.odata.datatype})
                         .then(function (response) {
-                            grid.options.data = response.data && response.data.value || [];
+                            var data = response.data && response.data.value || [];
+
+                            grid.options.minRowsToShow = data.length;
+                            if(grid.options.minRowsToShow > 1) {
+                                var origHeight = parseInt(grid.element.css('height').replace('px', ''), 10);
+                                var newHeight = origHeight + (grid.options.minRowsToShow - 1) * grid.options.rowHeight;
+                                grid.element.css('height', newHeight + 'px');
+                                grid.gridHeight = gridUtil.elementHeight(grid.element);
+                            }
+
+                            grid.options.data = data;
                             grid.api.odata.raise.success(grid);
                         },
                         function (response) {
@@ -524,6 +573,7 @@
                 return {
                     pre: function ($scope, $elm, $attrs, uiGridCtrl) {
                         if (uiGridCtrl.grid.options.enableOdata !== false) {
+                            uiGridCtrl.grid.element = $elm;
                             var hasExpandable = 'uiGridExpandable' in $attrs;
                             uiGridODataService.initializeGrid(uiGridCtrl.grid, hasExpandable);
                         }

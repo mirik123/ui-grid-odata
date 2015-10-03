@@ -103,11 +103,6 @@
 
         function onRootRegisterApi (registerApiOrig, gridscope) {
             return function (gridApi) {
-                if(!gridApi.odata) {
-                    gridApi.registerEventsFromObject(publicApi.events);
-                    gridApi.registerMethodsFromObject(publicApi.methods);
-                }
-
                 if (angular.isFunction(registerApiOrig)) {
                     registerApiOrig(gridApi);
                 }
@@ -138,6 +133,11 @@
 
                 if(gridApi.expandable) {
                     gridApi.expandable.on.rowExpandedStateChanged(gridscope, function (row) {
+                        if(row.$$fake) {
+                            row.$$fake = false;
+                            return;
+                        }
+
                         var col = row.grid.options.columnDefs.filter(function (itm) {
                             return itm.odata.expand === 'subgrid';
                         })[0];
@@ -162,11 +162,11 @@
 
                 gridApi.grid.registerDataChangeCallback(
                     function() {
-                        if (this.parentRow){
-                            this.parentRow.grid.options.expandableRowHeight = this.gridHeight;
-                            this.parentRow.height = this.parentRow.grid.options.rowHeight + (this.parentRow.isExpanded ? this.gridHeight : 0);
+                        if (this.parentRow && this.rows.length > 0){
+                            this.parentRow.expandedRowHeight = this.gridHeight;
+                            //this.parentRow.height = this.parentRow.grid.options.rowHeight + (this.parentRow.isExpanded ? this.gridHeight : 0);
 
-                            var origHeight = parseInt(this.parentRow.grid.element.css('height').replace('px', ''), 10);
+                            var origHeight = this.parentRow.grid.gridHeight;//parseInt(this.parentRow.grid.element.css('height').replace('px', ''), 10);
                             var newHeight = origHeight + (this.parentRow.isExpanded ? 1 : -1) * this.gridHeight;
                             this.parentRow.grid.element.css('height', newHeight + 'px');
                             this.parentRow.grid.gridHeight = newHeight;
@@ -180,6 +180,11 @@
 
                 if(gridApi.expandable) {
                     gridApi.expandable.on.rowExpandedStateChanged(gridscope, function (row) {
+                        if(row.$$fake) {
+                            row.$$fake = false;
+                            return;
+                        }
+
                         var col = row.grid.options.columnDefs.filter(function (itm) {
                             return itm.odata.expand === 'subgrid';
                         })[0];
@@ -256,9 +261,14 @@
                         if (!row.isExpanded) {
                             grid.expandable.expandedAll = false;
                         }
+
+                        row.$$fake = true;
+                        grid.api.expandable.raise.rowExpandedStateChanged(row);
                     }
 
-                    row.entity.subGridOptions.data = data;
+                    window.setTimeout(function() {
+                        row.entity.subGridOptions.data = data;
+                    }, 0);
                 });
         }
 
@@ -487,10 +497,9 @@
 
                             grid.options.minRowsToShow = data.length;
                             if(grid.options.minRowsToShow > 1) {
-                                var origHeight = parseInt(grid.element.css('height').replace('px', ''), 10);
-                                var newHeight = origHeight + (grid.options.minRowsToShow - 1) * grid.options.rowHeight;
+                                var newHeight = grid.gridHeight + (grid.options.minRowsToShow - 1) * grid.options.rowHeight;
                                 grid.element.css('height', newHeight + 'px');
-                                grid.gridHeight = gridUtil.elementHeight(grid.element);
+                                grid.gridHeight = newHeight;
                             }
 
                             grid.options.data = data;

@@ -389,7 +389,7 @@
 
                 grid.options.odata = angular.merge({
                     metadataurl: grid.options.odata.dataurl + '/$metadata',
-                    metadatatype: 'xml',
+                    metadatatype: 'application/xml',
                     expandable: 'subgrid',
                     entitySet: null,
                     expandRow: function (row, col, rowRenderIndex, $event) {
@@ -411,7 +411,10 @@
                     return;
                 }
 
-                $http.get(grid.options.odata.metadataurl, {dataType: grid.options.odata.metadatatype})
+                $http.get(grid.options.odata.metadataurl, 
+                    {
+                        headers: { 'Accept': grid.options.odata.metadatatype }
+                    })
                     .then(function (response) {
                         var colModels = $this.parseMetadata(response.data, grid.options.odata.expandable);
                         if (!colModels || !colModels[grid.options.odata.entitySet]) {
@@ -486,12 +489,15 @@
                 var $this = this;
 
                 grid.options.odata = angular.merge({
-                    datatype: 'json',
+                    datatype: 'application/json',
                     gencolumns: true
                 }, grid.options.odata);
 
                 var callback = function () {
-                    $http.get(grid.options.odata.dataurl, {dataType: grid.options.odata.datatype})
+                    $http.get(grid.options.odata.dataurl, 
+                    {
+                        headers: { 'Accept': grid.options.odata.datatype }
+                    })
                         .then(function (response) {
                             var data = response.data && response.data.value || [];
 
